@@ -1,0 +1,32 @@
+service: PayPal-Payout-Mock
+
+provider:
+  name: aws
+  runtime: python2.7
+
+functions:
+  payouts:
+    handler: handler.batch_payout
+    events:
+      - http:
+          method: post
+          path: payouts
+          integration: lambda
+          response:
+            headers:
+              Content-Type: "'application/json'"
+            template: $input.path('$') 
+ 
+  payouts_details:
+    handler: handler.batch_payout_details
+    events:
+      - http:
+          method: get
+          path: payouts
+          integration: lambda
+          response:
+            headers:
+              Content-Type: "'application/json'"
+            template: $input.path('$') 
+      
+

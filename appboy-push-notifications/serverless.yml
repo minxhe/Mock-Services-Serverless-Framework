@@ -1,0 +1,98 @@
+service: mock-appboy
+
+provider:
+  name: aws
+  runtime: python2.7
+  environment:
+    APPBOY_NOTIFICATIONS_TABLE: ${opt:stage, self:provider.stage}-${self:service}-notifications
+    APPBOY_NOTIFICATIONS_STATUS_TABLE: ${opt:stage, self:provider.stage}-${self:service}-notifications-status
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.APPBOY_NOTIFICATIONS_TABLE}"
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.APPBOY_NOTIFICATIONS_STATUS_TABLE}"
+
+functions:
+  notification:
+    handler: handler.notification
+    events:
+     - http:
+         path: campaigns/trigger/send
+         method: post
+         integration: lambda
+         response:
+           headers:
+             Content-Type: "'application/json'"
+
+  verification:
+    handler: handler.verification
+    events:
+      - http:
+          path: verification
+          method: get
+          integration: lambda
+          response:
+            headers:
+              Content-Type: "'application/json'"
+
+  add_status:
+    handler: handler.add_status
+    events:
+      - http:
+          path: add_status
+          method: post
+          integration: lambda
+          response:
+            headers:
+              Content-Type: "'application/json'"
+
+resources:
+  Resources:
+    AppboyNotificationsDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: timestamp_created
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: timestamp_created
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        TableName: ${self:provider.environment.APPBOY_NOTIFICATIONS_TABLE}
+    AppboyNotificationsStatusDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: user_id
+            AttributeType: S
+          - AttributeName: timestamp_created
+            AttributeType: S
+        KeySchema:
+          - AttributeName: user_id
+            KeyType: HASH
+          - AttributeName: timestamp_created
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+        TableName: ${self:provider.environment.APPBOY_NOTIFICATIONS_STATUS_TABLE}
